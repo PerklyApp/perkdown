@@ -65,7 +65,7 @@ function evaluateBlock(
   let currentBlock = "";
   let currentLine = 0;
   let errors = false;
-  let meta = {};
+  let meta: { [key: string]: string } = {};
   while (true) {
     if (currentLine >= lines.length) {
       if (block.key != "_INTERNAL_") {
