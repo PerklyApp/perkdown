@@ -125,12 +125,10 @@ function evaluateBlock(
   }
   let remaining = lines.slice(currentLine - 1);
   let rem = remaining.join("\n");
-
+  const render = shouldRender(block.key, block.value, settings);
   return {
-    markdown: shouldRender(block.key, block.value, settings)
-      ? currentBlock
-      : "",
-    meta: meta,
+    markdown: render ? currentBlock : "",
+    meta: render ? meta : {},
     remaining: rem,
     errors: errors,
   };
