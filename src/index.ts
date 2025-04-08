@@ -151,7 +151,7 @@ function parsePerkdownTag(tag: string): PerkdownTag | undefined {
   if (!tag.includes("<!--")) {
     return undefined;
   }
-  let exp = /^ *?<!-- *([A-Z]*):([A-Z]*)=?(.*?) *--> *?$/gm;
+  let exp = /^ *?<!-- *([A-Z|_]*):([A-Z|_]*)=?(.*?) *--> *?$/gm;
   const result = exp.exec(tag);
   if (result?.length == 4) {
     return {
