@@ -6,7 +6,7 @@ export interface PerkdownTag {
 }
 
 export interface PerkdownParserSettings {
-  renderBlocks: { [key: string]: string };
+  renderBlocks: { [key: string]: string | string[] };
 }
 
 export interface EvaluatedPerkdown {
@@ -31,7 +31,6 @@ export function evaluatePerkdown(
   if (!isPerkdown(perkdown)) {
     return { markdown: perkdown, meta: {} };
   }
-  let evaluatedBlocks = [];
   // now lets go line by line looking for tags
   let out = evaluateBlock(perkdown, settings, {
     key: "_INTERNAL_",
@@ -54,6 +53,17 @@ export function evaluatePerkdownStrict(
   if (!isPerkdown(perkdown)) {
     return undefined;
   }
+  let out = evaluateBlock(perkdown, settings, {
+    key: "_INTERNAL_",
+    value: "MAIN_BLOCK",
+  });
+  if (out.markdown == undefined) {
+    return undefined;
+  }
+  return {
+    markdown: out.markdown,
+    meta: out.meta,
+  };
 }
 
 function evaluateBlock(
@@ -63,10 +73,11 @@ function evaluateBlock(
 ): EvaluatedPerkdownBlock {
   let lines = perkdown.split("\n");
   let currentBlock = "";
-  let currentLine = 0;
+  let currentLine = -1;
   let errors = false;
   let meta: { [key: string]: string } = {};
   while (true) {
+    currentLine++;
     if (currentLine >= lines.length) {
       if (block.key != "_INTERNAL_") {
         console.warn(
@@ -114,8 +125,11 @@ function evaluateBlock(
   }
   let remaining = lines.slice(currentLine - 1);
   let rem = remaining.join("\n");
+
   return {
-    markdown: currentBlock,
+    markdown: shouldRender(block.key, block.value, settings)
+      ? currentBlock
+      : "",
     meta: meta,
     remaining: rem,
     errors: errors,
@@ -139,14 +153,37 @@ function parsePerkdownTag(tag: string): PerkdownTag | undefined {
   if (!tag.includes("<!--")) {
     return undefined;
   }
-  let exp = /^( *?)<!--( *)([A-Z]*):([A-Z]*)=?(.*?)( *)-->( *?)$/gm;
-  const result = tag.match(exp);
+  let exp = /^ *?<!-- *([A-Z]*):([A-Z]*)=?(.*?) *--> *?$/gm;
+  const result = exp.exec(tag);
   if (result?.length == 4) {
     return {
       namespace: result[1],
-      key: result[3],
-      value: result[4],
+      key: result[2],
+      value: result[3],
     };
   }
   return undefined;
+}
+
+function shouldRender(
+  key: string,
+  value: string,
+  setting: PerkdownParserSettings,
+): boolean {
+  if (key == "_INTERNAL_" && value == "MAIN_BLOCK") {
+    return true;
+  }
+  if (Object.keys(setting.renderBlocks).includes(key)) {
+    let vals = setting.renderBlocks[key];
+    if (vals == value) {
+      return true;
+    }
+    // it may be an array, lets see
+    if (vals != undefined && typeof vals == "object") {
+      if (vals.includes(value)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
